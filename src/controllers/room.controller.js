@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Room } from "../models/room.model.js";
 import { Hotel } from "../models/hotel.model.js";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const addRoom = asyncHandler(async (req, res) => {
   const { hotelId } = req.params;
@@ -22,6 +23,16 @@ const addRoom = asyncHandler(async (req, res) => {
     throw new ApiError(400, "roomType and pricePerNight are required");
   }
 
+  let imageUrls = [];
+  if (req.files && req.files.length > 0) {
+    const uploadResults = await Promise.all(
+      req.files.map((file) => uploadOnCloudinary(file.path))
+    );
+    imageUrls = uploadResults
+      .filter((result) => result !== null)
+      .map((result) => result.secure_url);
+  }
+
   const room = await Room.create({
     hotel: hotelId,
     roomType,
@@ -30,7 +41,7 @@ const addRoom = asyncHandler(async (req, res) => {
     capacity,
     totalRooms: totalRooms || 1,
     amenities: amenities || [],
-    images: req.imageUrls || [],
+    images: imageUrls,
   });
 
   return res

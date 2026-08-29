@@ -9,6 +9,7 @@ import {
   approveHotel,
 } from "../controllers/hotel.controller.js";
 import { verifyJWT, authorizeRoles } from "../middlewares/auth.middleware.js";
+import { upload } from "../middlewares/multer.middleware.js";
 
 const router = Router();
 
@@ -19,7 +20,12 @@ router.route("/:hotelId").get(getHotelById);
 // secured routes — hotel owner
 router
   .route("/")
-  .post(verifyJWT, authorizeRoles("hotel_owner"), registerHotel);
+  .post(
+    verifyJWT,
+    authorizeRoles("hotel_owner"),
+    upload.array("images", 5),
+    registerHotel
+  );
 router.route("/owner/my-hotels").get(verifyJWT, authorizeRoles("hotel_owner"), getMyHotels);
 router
   .route("/:hotelId")

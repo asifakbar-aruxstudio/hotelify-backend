@@ -26,4 +26,8 @@ app.use("/api/v1/bookings", bookingRouter);
 app.use("/api/v1/payments", paymentRouter);
 app.use("/api/v1/reviews", reviewRouter);
 
+// global error handler — MUST be the last app.use()
+import { errorHandler } from "./middlewares/error.middleware.js";
+app.use(errorHandler);
+
 export { app };

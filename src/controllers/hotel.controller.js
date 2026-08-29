@@ -2,12 +2,24 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Hotel } from "../models/hotel.model.js";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const registerHotel = asyncHandler(async (req, res) => {
   const { name, description, address, city, country, amenities } = req.body;
 
   if ([name, description, address, city, country].some((f) => !f?.trim())) {
     throw new ApiError(400, "All required fields must be filled");
+  }
+
+  // req.files comes from multer (upload.array("images", 5) on the route)
+  let imageUrls = [];
+  if (req.files && req.files.length > 0) {
+    const uploadResults = await Promise.all(
+      req.files.map((file) => uploadOnCloudinary(file.path))
+    );
+    imageUrls = uploadResults
+      .filter((result) => result !== null)
+      .map((result) => result.secure_url);
   }
 
   // hotel is created as unpaid/unapproved — registrationFee (5000) must be
@@ -20,7 +32,7 @@ const registerHotel = asyncHandler(async (req, res) => {
     city,
     country,
     amenities: amenities || [],
-    images: req.imageUrls || [], // populated by upload middleware if used
+    images: imageUrls,
   });
 
   return res

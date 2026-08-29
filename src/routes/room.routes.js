@@ -7,6 +7,7 @@ import {
   deleteRoom,
 } from "../controllers/room.controller.js";
 import { verifyJWT, authorizeRoles } from "../middlewares/auth.middleware.js";
+import { upload } from "../middlewares/multer.middleware.js";
 
 const router = Router();
 
@@ -17,7 +18,12 @@ router.route("/:roomId").get(getRoomById);
 // secured routes — hotel owner only
 router
   .route("/hotel/:hotelId")
-  .post(verifyJWT, authorizeRoles("hotel_owner"), addRoom);
+  .post(
+    verifyJWT,
+    authorizeRoles("hotel_owner"),
+    upload.array("images", 5),
+    addRoom
+  );
 router
   .route("/:roomId")
   .patch(verifyJWT, authorizeRoles("hotel_owner"), updateRoom)
