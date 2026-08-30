@@ -5,9 +5,9 @@ import dotenv from "dotenv";
 import { app } from "./app.js";
 import connectDB from "./config/db.js";
 
-dotenv.config();
+dotenv.config({path : "./.env"});
 
-const serverStart = async()=>{
+const serverStart = async () => {
     try{
       await connectDB();
       app.listen(process.env.PORT || 8000 ,  ()=>{
