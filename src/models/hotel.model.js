@@ -66,6 +66,13 @@ const hotelSchema = new Schema(
       type: Boolean, // admin approves before hotel goes live
       default: false,
     },
+    isRejected: {
+      type: Boolean, // admin can reject a pending hotel application
+      default: false,
+    },
+    rejectionReason: {
+      type: String,
+    },
     isActive: {
       type: Boolean,
       default: true,

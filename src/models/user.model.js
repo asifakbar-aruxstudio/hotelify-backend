@@ -41,6 +41,10 @@ const userSchema = new Schema(
       enum: ["admin", "hotel_owner", "customer"],
       default: "customer",
     },
+    isActive: {
+      type: Boolean, // admin can deactivate a user account
+      default: true,
+    },
     refreshToken: {
       type: String,
     },
@@ -49,12 +53,6 @@ const userSchema = new Schema(
 );
 
 // hash password before save
-// userSchema.pre("save", async function (next) {
-//   if (!this.isModified("password")) return next();
-//   this.password = await bcrypt.hash(this.password, 10);
-//   next();
-//});
-
 userSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
   this.password = await bcrypt.hash(this.password, 10);
