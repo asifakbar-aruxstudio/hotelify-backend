@@ -25,9 +25,14 @@ const payForBooking = asyncHandler(async (req, res) => {
   }
 
   const payment = await Payment.create({
+    type: "booking",
     booking: booking._id,
+    hotel: booking.hotel,
     user: req.user._id,
-    amount: booking.totalPrice, // includes the 10% booking charge
+    amount: booking.totalPrice, // roomPrice + 10% booking charge
+    platformShare: booking.bookingCharge, // the 10% surcharge — goes to the website owner
+    hotelShare: booking.roomPrice, // the room cost — owed to the hotel owner
+    payoutStatus: "pending",
     paymentGateway,
     transactionId,
     status: "success", // set from gateway webhook/response in real integration
@@ -59,10 +64,13 @@ const payHotelRegistrationFee = asyncHandler(async (req, res) => {
   }
 
   const payment = await Payment.create({
-    // registration fee isn't tied to a Booking — store hotelId via booking-less record
-    booking: hotel._id, // reused as a reference id; keep a separate Payment.type if you extend this later
+    type: "hotel_registration",
+    hotel: hotel._id,
     user: req.user._id,
     amount: hotel.registrationFee, // 5000
+    platformShare: hotel.registrationFee, // registration fee is 100% platform revenue
+    hotelShare: 0,
+    payoutStatus: "not_applicable", // nothing owed to the owner for this payment
     paymentGateway,
     transactionId,
     status: "success",

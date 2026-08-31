@@ -208,6 +208,98 @@ const getAnalytics = asyncHandler(async (req, res) => {
     );
 });
 
+// full accounting overview — platform revenue vs what's owed to each hotel owner
+const getAccounting = asyncHandler(async (req, res) => {
+  const totals = await Payment.aggregate([
+    { $match: { status: "success" } },
+    {
+      $group: {
+        _id: null,
+        totalRevenue: { $sum: "$amount" },
+        totalPlatformShare: { $sum: "$platformShare" },
+        totalHotelShare: { $sum: "$hotelShare" },
+      },
+    },
+  ]);
+
+  const pendingPayouts = await Payment.aggregate([
+    { $match: { status: "success", payoutStatus: "pending" } },
+    {
+      $group: {
+        _id: "$hotel",
+        totalPending: { $sum: "$hotelShare" },
+        paymentCount: { $sum: 1 },
+      },
+    },
+    {
+      $lookup: {
+        from: "hotels",
+        localField: "_id",
+        foreignField: "_id",
+        as: "hotel",
+      },
+    },
+    { $unwind: "$hotel" },
+    {
+      $lookup: {
+        from: "users",
+        localField: "hotel.owner",
+        foreignField: "_id",
+        as: "owner",
+      },
+    },
+    { $unwind: "$owner" },
+    {
+      $project: {
+        hotelId: "$_id",
+        hotelName: "$hotel.name",
+        ownerName: "$owner.fullName",
+        ownerEmail: "$owner.email",
+        totalPending: 1,
+        paymentCount: 1,
+      },
+    },
+    { $sort: { totalPending: -1 } },
+  ]);
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        totalRevenue: totals[0]?.totalRevenue || 0,
+        totalPlatformShare: totals[0]?.totalPlatformShare || 0,
+        totalHotelShare: totals[0]?.totalHotelShare || 0,
+        pendingPayouts,
+      },
+      "Accounting overview fetched"
+    )
+  );
+});
+
+// mark all pending payouts for a hotel as paid (e.g. after an offline bank transfer to the owner)
+const markHotelPayoutPaid = asyncHandler(async (req, res) => {
+  const { hotelId } = req.params;
+
+  const result = await Payment.updateMany(
+    { hotel: hotelId, payoutStatus: "pending", status: "success" },
+    { $set: { payoutStatus: "paid" } }
+  );
+
+  if (result.matchedCount === 0) {
+    throw new ApiError(404, "No pending payouts found for this hotel");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { updatedCount: result.modifiedCount },
+        "Payout marked as paid for this hotel"
+      )
+    );
+});
+
 export {
   getDashboardStats,
   getAllUsers,
@@ -218,4 +310,6 @@ export {
   rejectHotel,
   getAllBookingsAdmin,
   getAnalytics,
+  getAccounting,
+  markHotelPayoutPaid,
 };
